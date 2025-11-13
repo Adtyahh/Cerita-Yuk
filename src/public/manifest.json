@@ -1,0 +1,47 @@
+{
+  "name": "Cerita Yuk",
+  "short_name": "Cerita Yuk",
+  "description": "Ayo Berbagi Cerita Anda Sekarang!",
+  "start_url": "/index.html",
+  "display": "standalone",
+  
+  "background_color": "#F5F2F0",
+  "theme_color": "#FFFFFF",
+
+  "icons": [
+    {
+      "src": "images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "images/logo.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "description": "Halaman Utama Peta Cerita"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tambah Cerita Baru",
+      "short_name": "Tambah",
+      "url": "/#/add",
+      "icons": [
+        {
+          "src": "iconppl.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

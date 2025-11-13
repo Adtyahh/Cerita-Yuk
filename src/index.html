@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1E1E1E">
+
+  <link rel="shortcut icon" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <title>Cerita Yuk</title>
+</head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
+
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <header>
+      <div class="main-header container">
+        <a class="brand-name" href="#/">
+          <img src="images/logo.png" alt="Logo Cerita Yuk" class="brand-logo">
+          <h1>Cerita Yuk</h1>
+        </a>
+
+        <nav id="navigation-drawer" class="navigation-drawer">
+          <ul id="nav-list" class="nav-list">
+            <li><a href="#/">Beranda</a></li>
+            <li><a href="#/add">Tambah Cerita</a></li>
+            <li><a href="#/saved">Tersimpan</a></li> 
+            <li id="nav-login"><a href="#/login">Login</a></li>
+            <li id="nav-logout" style="display: none;"><a href="#">Logout</a></li>
+          </ul>
+        </nav>
+
+        <button id="notif-toggle" class="notif-toggle" aria-label="Toggle Notifications">
+          🔔
+        </button>
+
+        <button id="drawer-button" class="drawer-button">☰</button>
+      </div>
+    </header>
+
+    <main id="main-content" class="main-content" tabindex="0"></main>
+    
+  </body>
+</html>

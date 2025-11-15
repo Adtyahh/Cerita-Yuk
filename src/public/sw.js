@@ -38,14 +38,13 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  if (request.url.startsWith(BASE_URL)) {
+  if (request.url.startsWith(BASE_URL) && request.method === 'GET') {
     event.respondWith(
       fetch(request, {
         signal: AbortSignal.timeout(10000) 
       })
         .then(async (response) => {
           if (!response || !response.ok || response.status !== 200) {
-            console.warn('Service Worker: Invalid response', response);
             const cachedResponse = await caches.match(request);
             if (cachedResponse) {
               return cachedResponse;
@@ -53,7 +52,7 @@ self.addEventListener('fetch', (event) => {
             return response; 
           }
 
-          const responseToCache = response.clone();
+          const responseToCache = response.clone(); 
           
           try {
             const cache = await caches.open(DATA_CACHE_NAME);
@@ -76,15 +75,11 @@ self.addEventListener('fetch', (event) => {
           return new Response(
             JSON.stringify({ 
               error: true, 
-              message: 'Network request failed and no cache available',
-              offline: !navigator.onLine
+              message: 'Network request failed and no cache available'
             }), 
             {
-              status: 503,
-              statusText: 'Service Unavailable',
-              headers: new Headers({
-                'Content-Type': 'application/json'
-              })
+              status: 503, statusText: 'Service Unavailable',
+              headers: new Headers({'Content-Type': 'application/json'})
             }
           );
         }),
@@ -94,7 +89,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
-          return cachedResponse;
+          return cachedResponse; 
         }
         
         return fetch(request)
@@ -104,76 +99,74 @@ self.addEventListener('fetch', (event) => {
             }
 
             const clonedResponse = response.clone();
+            
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, clonedResponse);
+              cache.put(request, clonedResponse); 
             }).catch((error) => {
               console.error('Service Worker: Cache put failed', error);
             });
             
-            return response;
+            return response; 
           })
-          .catch((error) => {
-            console.error('Service Worker: Fetch app shell failed', error);
-            return caches.match('/index.html');
+          .catch(() => {
+            return caches.match('/');
           });
       }),
-    );
-  }
-  else {
-    event.respondWith(
-      fetch(request).catch((error) => {
-        console.error('Service Worker: Other fetch failed', error);
-        return new Response('Network error', { status: 408 });
-      })
     );
   }
 });
 
 self.addEventListener('push', (event) => {
-  let body;
-  if (event.data) {
-    body = event.data.text(); 
-  } else {
-    body = 'Push message no payload';
-  }
-
   let title = 'Cerita Yuk';
-  let message = body;
+  let message = 'Anda memiliki pesan baru.';
   let icon = 'images/logo.png';
   let targetUrl = '/';
-  
-  try {
-    const data = JSON.parse(body);
-    title = data.title || title;
-    message = data.body || message;
-    icon = data.icon || icon;
-    targetUrl = data.url || targetUrl;
-  } catch (e) {
-    console.error('Service Worker: Push data parse failed', e);
-  }
 
-  const options = {
-    body: message,
-    icon: icon,
-    badge: 'iconppl.png',
-    data: { 
-      url: targetUrl,
-    },
-    actions: [ 
-      { action: 'open-story', title: 'Lihat Cerita' },
-    ],
-  };
+  const pushEvent = event.waitUntil(
+    (async () => {
+      let bodyText = 'Push message no payload'; 
 
-  event.waitUntil(
-    self.registration.showNotification(title, options),
+      try {
+        if (event.data) {
+          bodyText = await event.data.text();
+          
+          try {
+            const data = JSON.parse(bodyText);
+            title = data.title || title;
+            message = data.body || message;
+            icon = data.icon || icon;
+            targetUrl = data.url || targetUrl;
+          } catch (jsonError) {
+            console.log('Service Worker: Payload bukan JSON, gunakan sebagai teks.');
+            message = bodyText;
+          }
+        }
+      } catch (readError) {
+        console.error('Service Worker: Gagal membaca push data', readError);
+      }
+
+      const options = {
+        body: message,
+        icon: icon,
+        badge: 'iconppl.png',
+        data: { 
+          url: targetUrl,
+        },
+        actions: [ 
+          { action: 'open-story', title: 'Lihat Cerita' },
+        ],
+      };
+
+      await self.registration.showNotification(title, options);
+    })()
   );
+
+  event.waitUntil(pushEvent);
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
   const urlToOpen = event.notification.data.url || '/';
-
   event.waitUntil(
     clients.openWindow(urlToOpen)
       .then((windowClient) => {

@@ -16,6 +16,8 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) => {
       console.log('Service Worker: Caching App Shell...');
       return cache.addAll(APP_SHELL_RESOURCES);
+    }).catch((error) => {
+      console.error('Service Worker: Install failed', error);
     }),
   );
 });
@@ -38,33 +40,94 @@ self.addEventListener('fetch', (event) => {
 
   if (request.url.startsWith(BASE_URL)) {
     event.respondWith(
-      fetch(request)
-        .then(async (response) => { 
-          const cache = await caches.open(DATA_CACHE_NAME); 
-          await cache.put(request, response.clone()); 
-          return response; 
+      fetch(request, {
+        signal: AbortSignal.timeout(10000) 
+      })
+        .then(async (response) => {
+          if (!response || !response.ok || response.status !== 200) {
+            console.warn('Service Worker: Invalid response', response);
+            const cachedResponse = await caches.match(request);
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            return response; 
+          }
+
+          const responseToCache = response.clone();
+          
+          try {
+            const cache = await caches.open(DATA_CACHE_NAME);
+            await cache.put(request, responseToCache);
+          } catch (cacheError) {
+            console.error('Service Worker: Cache put failed', cacheError);
+          }
+          
+          return response;
         })
-        .catch(() => {
-          return caches.match(request).then((cachedResponse) => {
-            return cachedResponse || Promise.reject(new Error('Data not in cache'));
-          });
+        .catch(async (error) => {
+          console.error('Service Worker: Fetch failed', error);
+          
+          const cachedResponse = await caches.match(request);
+          if (cachedResponse) {
+            console.log('Service Worker: Returning cached response');
+            return cachedResponse;
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              error: true, 
+              message: 'Network request failed and no cache available',
+              offline: !navigator.onLine
+            }), 
+            {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: new Headers({
+                'Content-Type': 'application/json'
+              })
+            }
+          );
         }),
     );
-  } else if (APP_SHELL_RESOURCES.includes(url.pathname) || url.pathname === '/') {
-     event.respondWith(
+  } 
+  else if (APP_SHELL_RESOURCES.includes(url.pathname) || url.pathname === '/') {
+    event.respondWith(
       caches.match(request).then((cachedResponse) => {
-        return cachedResponse || fetch(request).then((response) => {
-          const clonedResponse = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, clonedResponse);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        
+        return fetch(request)
+          .then((response) => {
+            if (!response || !response.ok) {
+              return response;
+            }
+
+            const clonedResponse = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, clonedResponse);
+            }).catch((error) => {
+              console.error('Service Worker: Cache put failed', error);
+            });
+            
+            return response;
+          })
+          .catch((error) => {
+            console.error('Service Worker: Fetch app shell failed', error);
+            return caches.match('/index.html');
           });
-          return response;
-        });
       }),
     );
   }
+  else {
+    event.respondWith(
+      fetch(request).catch((error) => {
+        console.error('Service Worker: Other fetch failed', error);
+        return new Response('Network error', { status: 408 });
+      })
+    );
+  }
 });
-
 
 self.addEventListener('push', (event) => {
   let body;
@@ -81,11 +144,12 @@ self.addEventListener('push', (event) => {
   
   try {
     const data = JSON.parse(body);
-    title = data.title;
-    message = data.body;
-    icon = data.icon || 'images/logo.png';
-    targetUrl = data.url || '/';
+    title = data.title || title;
+    message = data.body || message;
+    icon = data.icon || icon;
+    targetUrl = data.url || targetUrl;
   } catch (e) {
+    console.error('Service Worker: Push data parse failed', e);
   }
 
   const options = {
@@ -111,8 +175,12 @@ self.addEventListener('notificationclick', (event) => {
   const urlToOpen = event.notification.data.url || '/';
 
   event.waitUntil(
-    clients.openWindow(urlToOpen).then((windowClient) => {
-      return windowClient ? windowClient.focus() : null;
-    }),
+    clients.openWindow(urlToOpen)
+      .then((windowClient) => {
+        return windowClient ? windowClient.focus() : null;
+      })
+      .catch((error) => {
+        console.error('Service Worker: Open window failed', error);
+      })
   );
 });

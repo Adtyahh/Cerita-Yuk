@@ -91,13 +91,20 @@ const PushNotificationHelper = {
     const token = sessionStorage.getItem('AUTH_TOKEN'); 
     if (!token) return;
 
+    const subJson = subscription.toJSON();
+    
+    const subscriptionData = {
+      endpoint: subJson.endpoint,
+      keys: subJson.keys,
+    };
+
     await fetch(`${CONFIG.BASE_URL}/notifications/subscribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(subscription.toJSON()),
+      body: JSON.stringify(subscriptionData),
     });
   },
 

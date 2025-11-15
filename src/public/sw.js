@@ -36,7 +36,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  if (request.url.startsWith(BASE_URL)) {
+  if (request.url.startsWith(BASE_URL) && request.method === 'GET') {
     event.respondWith(
       fetch(request)
         .then(async (response) => { 
@@ -63,6 +63,7 @@ self.addEventListener('fetch', (event) => {
       }),
     );
   }
+
 });
 
 
